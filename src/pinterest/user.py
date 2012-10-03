@@ -4,10 +4,13 @@ Created on Oct 2, 2012
 @author: vandana
 User class to represent pinterest.com users.
 '''
-class User:
+
+from src.pinterest.entity import Entity
+
+class User(Entity):
     def __init__(self):
         pass
 
-class Board:
+class Board(Entity):
     def __init__(self):
         pass
