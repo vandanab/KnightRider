@@ -80,7 +80,8 @@ class PinsCrawler(Crawler):
             tuples = a_tags[len(a_tags) - 1].attrs
             for t in tuples:
                 if t[0] == "href":
-                    link = self.base_url + t[1];
+          # is this correct? you are appending both users and boards to the same links. So will it be ok when we give these links to the crawler again?
+                    link = self.base_url + t[1];	
                     links.append(link)
         return links
 
