@@ -80,7 +80,7 @@ class PinsCrawler(Crawler):
             tuples = a_tags[len(a_tags) - 1].attrs
             for t in tuples:
                 if t[0] == "href":
-                    link = self.base_url + t[1];
+                    link = self.base_url + t[1];	
                     links.append(link)
         return links
 
