@@ -92,7 +92,7 @@ class UserCrawler(Crawler):
         for a in a_tag:        	
         	page = (self.base_url + a['href'] + "following")
         
-        html1 = get_contents(page)
+        html1 = util.get_contents(page)
         if (html1 != None):
         	bs_follow = BeautifulSoup(html1)
         	divs = bs_follow.find_all('div', attrs={'class' : 'person'})
