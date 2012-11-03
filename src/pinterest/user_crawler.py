@@ -7,6 +7,7 @@ Module for crawling pinterest.com user data.
 
 from crawler.base import Crawler
 from bs4 import BeautifulSoup
+from src.common import util
 import httplib2
 import sys 
 
@@ -52,6 +53,23 @@ class UserCrawler(Crawler):
         # the board/pin urls
         # stats
         # followers and following network
+        # page1 = html
+        # page2 = get userid from html generate URL for userid/following
+        # crawl page2 to get userids of persons the user is following div class="person", href = "/vistabill"
+        # add new URLs to links
+        # populate user data structure
+        
+        location = bs.find_all('span', attrs={'class' : 'icon location'})  
+        #dynamic web pages?
+        #location.content has the profile location
+        
+        li_tag = bs.find_all('li');
+        a_tag = li_tag.find_all('a', attrs={'class' : 'selected'});
+        tuples = a_tag[0].attrs
+        for t in tuples:
+        	if t == "href":
+            	page1.append(self.base_url + tuples[t] + "following")
+        	
         return links
 
 def main(argv=None):
