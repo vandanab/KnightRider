@@ -8,15 +8,19 @@ Module for crawling pinterest.com user data.
 from src.crawler.base import Crawler
 from bs4 import BeautifulSoup
 from src.common import util
-from src.common.settings import USERS_FILE, PINS_FILE
+from src.common.settings import PINS_DIR, USERS_DIR
+from datetime import datetime, timedelta
 import sys 
 import cjson
 import logging
+import os
 
 class UserCrawler(Crawler):
   
   def __init__(self):
-    self.base_url = "http://www.pinterest.com"
+    self.file_start_time = datetime.now()
+    self.time_delta = timedelta(hours=6)
+    self.base_url = "http://pinterest.com"
     Crawler.__init__(self)
 
   
@@ -26,9 +30,7 @@ class UserCrawler(Crawler):
       logging.debug("no html content fetched after %s retries." %
                     str(self.RETRY_COUNT))
       return None
-    soup = BeautifulSoup(page_content)
-    soup.prettify()
-    return soup
+    return BeautifulSoup(page_content)
 
   
   def get_start_links(self):
@@ -56,11 +58,21 @@ class UserCrawler(Crawler):
     return links
 
         
-  def write_to_file_json(self, file_name, data):
+  def write_to_file_json(self, base_dir, data):
+    def get_file_name(base_dir):
+      current_time = datetime.now()
+      if current_time - self.file_start_time >= self.time_delta:
+        self.file_start_time = current_time
+      file_dir = base_dir + '%s/%s/%s/' % (self.file_start_time.year,
+                                            self.file_start_time.month,
+                                            self.file_start_time.day)
+      if not os.path.exists(file_dir): os.umask(0), os.makedirs(file_dir, 0777)
+      return file_dir + '%s.json' % self.file_start_time.strftime('%Y-%m-%d_%H-%M')
+    
+    file_name = get_file_name(base_dir);
     f = open(file_name, 'a')
     f.write(cjson.encode(data)+'\n')
     f.close()
-      
 
   def process_html(self, html):
     """
@@ -75,7 +87,7 @@ class UserCrawler(Crawler):
     bs.prettify()
     
     user_data = self.get_user_data(bs)
-    self.write_to_file_json(USERS_FILE, user_data)
+    self.write_to_file_json(USERS_DIR, user_data)
                
     return self.get_follower_following_links(user_data['user'])
   
@@ -132,20 +144,19 @@ class UserCrawler(Crawler):
   def get_boards_data(self, soup, user):
     boards_data = []
     boards = soup.find_all('div', attrs={'class':'pin pinBoard'})
-    #boards = soup.find_all('div', attrs={'class':'board'})
     for board in boards:
       board_id = board['id'].strip('board')
-      #board_id = ''
-      #atag = board.find('a')
-      #board_url = self.base_url + atag['href']
-      board_url = self.base_url + '/board/%s/' % board_id
+      #board_url = self.base_url + '/board/%s/' % board_id
+      board_url = self.base_url + board.find('a', class_='link')['href']
       pins, page_id = [], 0
       pin_count = 0
       board_data = {}
       while True:
-        soup = self.get_soup(board_url+'?page=%s'%page_id)
         if page_id == 0:
+          soup = self.get_soup(board_url)
           board_data = self.get_board_data(soup, board_id)
+        else:
+          soup = self.get_soup(board_url + '?page=%s' % page_id)
         pins_on_page = map(self.get_pin_data,
                            soup.find_all('div', attrs={'class':'pin'}))
         for pin in pins_on_page:
@@ -160,7 +171,7 @@ class UserCrawler(Crawler):
         page_id+=1
       boards_data.append(board_data)
       for pin in pins:
-        self.write_to_file_json(PINS_FILE, pin)
+        self.write_to_file_json(PINS_DIR, pin)
     return boards_data
 
 
@@ -183,7 +194,7 @@ class UserCrawler(Crawler):
       if count:
         count_split = count.get_text().strip().split()
         if count_split: return int(count_split[0])
-        else: return 0
+      return -1 #not defined
     pin_id = pin.get('data-id')
     image_url = pin.find(class_='PinImageImg').get('src')
     pin_data = {
