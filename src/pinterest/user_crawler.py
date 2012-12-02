@@ -146,28 +146,23 @@ class UserCrawler(Crawler):
     boards = soup.find_all('div', attrs={'class':'pin pinBoard'})
     for board in boards:
       board_id = board['id'].strip('board')
-      #board_url = self.base_url + '/board/%s/' % board_id
       board_url = self.base_url + board.find('a', class_='link')['href']
-      pins, page_id = [], 0
+      pins, page_id = [], 1
       pin_count = 0
       board_data = {}
       while True:
-        if page_id == 0:
-          soup = self.get_soup(board_url)
+        soup = self.get_soup(board_url + '?page=%s' % page_id)
+        if page_id == 1:
           board_data = self.get_board_data(soup, board_id)
-        else:
-          soup = self.get_soup(board_url + '?page=%s' % page_id)
         pins_on_page = map(self.get_pin_data,
-                           soup.find_all('div', attrs={'class':'pin'}))
+                           soup.find_all('div', class_='pin'))
         for pin in pins_on_page:
           if 'pin_user' not in pin: pin['pin_user'] = user
           pin['board_id'] = board_id
-        if pins_on_page:
+        if pins_on_page and pin_count < board_data['pins_count']:
           pins+=pins_on_page
           pin_count += len(pins_on_page)
         else: break
-        if pin_count >= board_data['pins_count']:
-          break
         page_id+=1
       boards_data.append(board_data)
       for pin in pins:
