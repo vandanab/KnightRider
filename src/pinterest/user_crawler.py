@@ -5,15 +5,16 @@ Created on Sep 19, 2012
 Module for crawling pinterest.com user data.
 '''
 
+import cjson
+import logging
+import os
+import sys
+#sys.path.append(r"/home/vandana/workspace/KnighRider/src")
 from src.crawler.base import Crawler
 from bs4 import BeautifulSoup
 from src.common import util
 from src.common.settings import PINS_DIR, USERS_DIR
 from datetime import datetime, timedelta
-import sys 
-import cjson
-import logging
-import os
 
 class UserCrawler(Crawler):
   
@@ -25,10 +26,12 @@ class UserCrawler(Crawler):
 
   
   def get_soup(self, url):
-    page_content = util.get_contents(url, self.RETRY_COUNT)
+    (header, page_content) = util.get_contents(url, self.RETRY_COUNT)
     if page_content == None:
       logging.debug("no html content fetched after %s retries." %
                     str(self.RETRY_COUNT))
+      logging.debug('Request Failed: %s status' % header['status'])
+      logging.debug("Response Header: %s" % header)
       return None
     return BeautifulSoup(page_content)
 
@@ -36,7 +39,7 @@ class UserCrawler(Crawler):
   def get_start_links(self):
     # sensitive to html structure
     links = []
-    page_html = util.get_contents(self.base_url, self.RETRY_COUNT)
+    (header, page_html) = util.get_contents(self.base_url, self.RETRY_COUNT)
     if page_html != None:
       bs = BeautifulSoup(page_html)
       bs.prettify()
@@ -55,6 +58,8 @@ class UserCrawler(Crawler):
           for t in tuples:
             if t == "href":
               links.append(self.base_url + tuples[t])
+    else:
+      logging.debug("Request Failed: %s" % header)
     return links
 
         
@@ -73,6 +78,7 @@ class UserCrawler(Crawler):
     f = open(file_name, 'a')
     f.write(cjson.encode(data)+'\n')
     f.close()
+
 
   def process_html(self, html):
     """
@@ -152,6 +158,8 @@ class UserCrawler(Crawler):
       board_data = {}
       while True:
         soup = self.get_soup(board_url + '?page=%s' % page_id)
+        if soup == None:
+          break
         if page_id == 1:
           board_data = self.get_board_data(soup, board_id)
         pins_on_page = map(self.get_pin_data,
