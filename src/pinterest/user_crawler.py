@@ -9,11 +9,11 @@ import cjson
 import logging
 import os
 import sys
-#sys.path.append(r"/home/vandana/workspace/KnighRider/src")
-from src.crawler.base import Crawler
+sys.path.append('../')
+from crawler.base import Crawler
 from bs4 import BeautifulSoup
-from src.common import util
-from src.common.settings import PINS_DIR, USERS_DIR
+from common import util
+from common.settings import PINS_DIR, USERS_DIR
 from datetime import datetime, timedelta
 
 class UserCrawler(Crawler):

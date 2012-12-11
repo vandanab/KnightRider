@@ -153,7 +153,6 @@ class MongoQueue(IQueue, ISet):
       item = self.db[self.queue_name].find_one()
       if item:
         self.db[self.queue_name].remove(item)
-        self.db[self.queue_name+"_in_process"].insert({"_id": item})
         return item["_id"]
       return None
   
@@ -179,18 +178,16 @@ class MongoQueue(IQueue, ISet):
       next_item = self.dequeue()
       if next_item: yield next_item
   
-  def get_items_being_processed(self):
-    return [item["_id"] for item in self.db[self.queue_name+"_in_process"].find()]
+  def get_items(self):
+    return [item["_id"] for item in self.db[self.queue_name].find()]
   
   def add(self, elt):
     self.enqueue(elt)
   
   def remove(self, elt):
     with self.lock_:
-      item = self.db[self.queue_name].find({"_id": elt})
-      if item:
-        self.db[self.queue_name].remove(item)
-  
+      self.db[self.queue_name].remove({"_id": elt})
+
   def __contains__(self, key):
     with self.lock_:
       item = self.db[self.queue_name].find({"_id": key})

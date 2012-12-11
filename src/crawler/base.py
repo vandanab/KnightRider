@@ -6,7 +6,7 @@ Basic web crawler
 """
 
 from abc import abstractmethod
-from src.common.data_structures import MongoQueue
+from common.data_structures import MongoQueue
 import httplib2
 import time
 import logging
@@ -31,6 +31,7 @@ class Crawler:
     self.unvisited_urls.extend(more_links)
     print self.unvisited_urls
     
+    self.unvisited_in_process = MongoQueue("unvisited_in_process")
     # set of visited urls
     self.visited_urls = MongoQueue("visited")
     
@@ -51,27 +52,29 @@ class Crawler:
     http = httplib2.Http()
     while self.unvisited_urls:
       link = self.unvisited_urls.dequeue()
+      self.unvisited_in_process.enqueue(link)
       retry_count = self.RETRY_COUNT
       while retry_count > 0:
+        #try:
         (header, pagehtml) = http.request(link, 'GET')
-        try:
-          if header['status'] == '200':
-            urls = self.process_html(pagehtml)
-            self.visited_urls.enqueue(link)
-            for i in urls:
-              if i in self.visited_urls or i in self.unvisited_urls:
-                continue
-              self.unvisited_urls.enqueue(i)
-            break
-          else:
-            logging.debug('Request Failed: %s status' % header['status'])
-            logging.debug("Response Header: %s", header)
-            retry_count -= 1;
-            time.sleep(120) #sleep for 2 mins before continuing
-            logging.info("Retrying...")
-        except:
+        if header['status'] == '200':
+          urls = self.process_html(pagehtml)
+          self.unvisited_in_process.remove(link)
+          self.visited_urls.enqueue(link)
+          for i in urls:
+            if i in self.visited_urls or i in self.unvisited_urls:
+              continue
+            self.unvisited_urls.enqueue(i)
+          break
+        else:
+          logging.debug('Request Failed: %s status' % header['status'])
+          logging.debug("Response Header: %s", header)
+          retry_count -= 1;
+          time.sleep(120) #sleep for 2 mins before continuing
+          logging.info("Retrying...")
+        """except:
           logging.debug('Some error occurred.')
-          break      
+          break"""      
     
     #might not be needed
   def continue_crawl(self):
