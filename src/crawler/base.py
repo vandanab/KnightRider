@@ -10,6 +10,7 @@ from common.data_structures import MongoQueue
 import httplib2
 import time
 import logging
+import sys
 
 class Crawler:
   """
@@ -55,26 +56,38 @@ class Crawler:
       self.unvisited_in_process.enqueue(link)
       retry_count = self.RETRY_COUNT
       while retry_count > 0:
-        #try:
-        (header, pagehtml) = http.request(link, 'GET')
-        if header['status'] == '200':
-          urls = self.process_html(pagehtml)
-          self.unvisited_in_process.remove(link)
-          self.visited_urls.enqueue(link)
-          for i in urls:
-            if i in self.visited_urls or i in self.unvisited_urls:
-              continue
-            self.unvisited_urls.enqueue(i)
+        try:
+          (header, pagehtml) = http.request(link, 'GET')
+        except:
+          logging.debug('Error occurred while trying to crawl a url.')
+          logging.debug('Error type: %s' % sys.exc_info()[0])
           break
-        else:
-          logging.debug('Request Failed: %s status' % header['status'])
-          logging.debug("Response Header: %s", header)
-          retry_count -= 1;
-          time.sleep(120) #sleep for 2 mins before continuing
-          logging.info("Retrying...")
-        """except:
-          logging.debug('Some error occurred.')
-          break"""      
+        try:
+          if header['status'] == '200':
+            try:
+              urls = self.process_html(pagehtml)
+            except:
+              logging.debug('Error while processing the html to get more urls.')
+              logging.debug('Error type: %s' % sys.exc_info()[0])
+              logging.debug('Error traceback: %s' % sys.exc_info()[2])
+              break;
+            self.unvisited_in_process.remove(link)
+            self.visited_urls.enqueue(link)
+            for i in urls:
+              if i in self.visited_urls or i in self.unvisited_urls:
+                continue
+              self.unvisited_urls.enqueue(i)
+            break
+          else:
+            logging.debug('Request Failed: %s status' % header['status'])
+            logging.debug("Response Header: %s", header)
+            retry_count -= 1;
+            time.sleep(120) #sleep for 2 mins before continuing
+            logging.info("Retrying...")
+        except:
+          logging.debug('Bad http response. Response header: %s' % header)
+          logging.debug('Error type: %s' % sys.exc_info()[0])
+          break
     
     #might not be needed
   def continue_crawl(self):
