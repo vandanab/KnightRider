@@ -191,8 +191,9 @@ class MongoQueue(IQueue, ISet):
   def __contains__(self, key):
     with self.lock_:
       item = self.db[self.queue_name].find({"_id": key})
-      if item: return True
-      else: return False
+      for i in item:
+        if i: return True
+      return False
   
   def __str__(self):
     elts = self.db[self.queue_name].find()

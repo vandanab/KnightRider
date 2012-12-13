@@ -70,7 +70,7 @@ class Crawler:
               logging.debug('Error while processing the html to get more urls.')
               logging.debug('Error type: %s' % sys.exc_info()[0])
               logging.debug('Error traceback: %s' % sys.exc_info()[2])
-              break;
+              break
             self.unvisited_in_process.remove(link)
             self.visited_urls.enqueue(link)
             for i in urls:
